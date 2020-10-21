@@ -63,6 +63,14 @@ Level.prototype.update = function() {
         this.ball = new GolfBall(this.posStart);
 }
 
+Level.prototype.pushBall = function([mouseX, mouseY]) {
+    if (this.ball.vel.every(x => x === 0)) {
+        let dirVector = [mouseX - this.ball.pos[0], mouseY - this.ball.pos[1]];
+        let moveVectorNorm = Math.sqrt(dirVector.map(x => x**2).reduce((acc, val) => acc + val));
+        this.ball.vel = dirVector.map(x => x * (this.force / moveVectorNorm) / (fps / 2));
+    }
+}
+
 
 ///////////////////////////////////////////////////////////Graphics
 
@@ -98,21 +106,19 @@ let drawLevel = function(level) {
 ///////////////////////////////////////////////////////////Controls
 
 
-let pushBall = function(evt, level) {
+let userClick = function(evt, level) {
     let canRect = evt.target.getBoundingClientRect();
     let [mouseX, mouseY] = [evt.clientX - canRect.left, evt.clientY - canRect.top];
-    let dirVector = [mouseX - level.ball.pos[0], mouseY - level.ball.pos[1]];
-    let moveVectorNorm = Math.sqrt(dirVector.map(x => x**2).reduce((acc, val) => acc + val));
-    level.ball.vel = dirVector.map(x => x * (level.force / moveVectorNorm) / (fps / 2));
+    level.pushBall([mouseX, mouseY]);
 }
 
-let updateForce = function(evt, level) {
+let userScroll = function(evt, level) {
     evt.preventDefault();
     level.setForce(level.force - evt.deltaY);
 }
 
-gameCan.addEventListener('click', evt => pushBall(evt, lvl));
-gameCan.addEventListener('wheel', evt => updateForce(evt, lvl));
+gameCan.addEventListener('click', evt => userClick(evt, lvl));
+gameCan.addEventListener('wheel', evt => userScroll(evt, lvl));
 
 // Test
 
