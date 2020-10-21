@@ -7,6 +7,8 @@ const defaultRadius = Math.round(defaultSize / Math.sqrt(Math.PI));
 const minForce = 40;
 const maxForce = 130;
 const fps = 80;
+const lvlWidth = 500;
+const lvlHeight = 500;
 
 let Rectangle = function(pos, width, height) {
     this.pos = pos;
@@ -39,6 +41,7 @@ GolfBall.prototype.update = function() {
 }
 
 let Level = function(posStart, posGoal) {
+    this.posStart = posStart;
     this.force = minForce;
     this.ball = new GolfBall(posStart);
     this.goal = new Goal(posGoal);
@@ -69,7 +72,7 @@ const ctx = gameCan.getContext('2d');
 
 let drawLevel = function(level) {
     ctx.fillStyle = '#FFF';
-    ctx.fillRect(0, 0, 500, 500);
+    ctx.fillRect(0, 0, lvlWidth, lvlHeight);
     // draw ball
     ctx.fillStyle = '#000';
     ctx.beginPath();
