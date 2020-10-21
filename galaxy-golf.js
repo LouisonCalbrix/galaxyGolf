@@ -68,6 +68,8 @@ Level.prototype.update = function() {
 
 
 const gameCan = document.querySelector('canvas#game-canvas');
+gameCan.width = lvlWidth;
+gameCan.height = lvlHeight;
 const ctx = gameCan.getContext('2d');
 
 let drawLevel = function(level) {
