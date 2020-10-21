@@ -45,9 +45,6 @@ let Level = function(posStart, posGoal) {
     this.force = minForce;
     this.ball = new GolfBall(posStart);
     this.goal = new Goal(posGoal);
-    // attributes: goal, ball
-    // goal = {x: xGoal, y: yGoal}
-    // methods: update
 }
 
 Level.prototype.setForce = function(force) {
@@ -61,6 +58,9 @@ Level.prototype.setForce = function(force) {
 
 Level.prototype.update = function() {
     this.ball.update();
+    if (this.ball.pos[0] < -2*this.ball.size || this.ball.pos[0] > lvlWidth + 2*this.ball.size ||
+        this.ball.pos[1] < -2*this.ball.size || this.ball.pos[1] > lvlHeight + 2*this.ball.size)
+        this.ball = new GolfBall(this.posStart);
 }
 
 
