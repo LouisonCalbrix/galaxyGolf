@@ -16,8 +16,39 @@ let Rectangle = function(pos, width, height) {
     this.height = height;
 }
 
-Rectangle.prototype.setMiddle = function(pos) {
-    this.pos = pos.map((value, index) => value -= [this.width, this.height][index] / 2);
+Object.defineProperty(Rectangle.prototype, 'middle', {
+    get: function() { return [this.pos[0] - this.width / 2, this.pos[1] - this.height / 2]; },
+    set: function(val) {
+        this.pos[0] = val[0] - this.width / 2; 
+        this.pos[1] = val[1] - this.height / 2;
+    }
+});
+
+Object.defineProperty(Rectangle.prototype, 'left', {
+    get: function() { return this.pos[0]; },
+    set: function(val) { this.pos[0] = val; }
+});
+
+Object.defineProperty(Rectangle.prototype, 'right', {
+    get: function() { return this.pos[0] + this.width; },
+    set: function(val) { this.pos[0] = val - this.width; }
+});
+
+Object.defineProperty(Rectangle.prototype, 'top', {
+    get: function() { return this.pos[1]; },
+    set: function(val) { this.pos[1] = val; }
+});
+
+Object.defineProperty(Rectangle.prototype, 'bottom', {
+    get: function() { return this.pos[1] + this.height; },
+    set: function(val) { this.pos[1] = val - this.height; }
+});
+
+Rectangle.prototype.collide = function(rect2) {
+    return (this.left > rect2.left && this.left < rect2.right ||
+        this.right > rect2.left && this.right < rect2.right) &&
+        (this.top > rect2.top && this.top < rect2.bottom ||
+        this.bottom > rect2.top && this.bottom < rect2.bottom);
 }
 
 let Circle = function([x, y], size) {
@@ -37,7 +68,7 @@ let GolfBall = function(pos) {
 
 GolfBall.prototype.update = function() {
     this.pos = this.pos.map((axis, index) => axis + this.vel[index]);
-    this.hitbox.setMiddle(this.pos);
+    this.hitbox.middle = this.pos;
 }
 
 let Level = function(posStart, posGoal) {
