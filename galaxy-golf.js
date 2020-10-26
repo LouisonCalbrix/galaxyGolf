@@ -92,6 +92,10 @@ Level.prototype.update = function() {
     if (this.ball.pos[0] < -2*this.ball.size || this.ball.pos[0] > lvlWidth + 2*this.ball.size ||
         this.ball.pos[1] < -2*this.ball.size || this.ball.pos[1] > lvlHeight + 2*this.ball.size)
         this.ball = new GolfBall(this.posStart);
+    if (this.ball.hitbox.collide(this.goal.hitbox)) {
+        this.ball.vel = [0, 0];
+        console.log('winner!!!');
+    }
 }
 
 Level.prototype.pushBall = function([mouseX, mouseY]) {
