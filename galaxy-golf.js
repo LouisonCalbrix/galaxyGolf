@@ -3,8 +3,10 @@
 // author: Louison Calbrix
 
 const fps = 80;
-const lvlWidth = 500;
-const lvlHeight = 500;
+
+
+////////////////////////////////////////////////////////////Game parts
+
 
 /* Rectangle
  * Represent the geometric shape of a rectangle. Top and bottom sides are 
@@ -16,6 +18,7 @@ const lvlHeight = 500;
  *  - height: a single number representing its height
  *  Interface of a rectangle object:
  *  - collide: function
+ *  - move: function
  *  - middle (get/set)
  *  - left (get/set)
  *  - right (get/set)
@@ -74,80 +77,155 @@ Rectangle.prototype.collide = function(rect2) {
         this.bottom > rect2.top && this.bottom < rect2.bottom);
 }
 
-/* Circle
- *
+/* Change the rectangle pos, so that it is by [deltaX, deltaY]. move function
+ * must be called with the following argument:
+ *  -[deltaX, deltaY]: two numbers where the rectangle should be moved
  */
+Rectangle.prototype.move = function([deltaX, deltaY]) {
+    this.left += deltaX;
+    this.top += deltaY;
+}
+
+
+/* GameObject
+ * Represent an object in the game. GameObject constructor must be called with the 
+ * following arguments:
+ *  - name: a string allowing the user to identify the game object instance
+ *  - pos: an array containing two numbers [x, y] which are coordinates for its 
+ *  upper-left corner. 
+ *  - rects: an array of arrays of the form [pos, width, height] where pos, width
+ *  and height must be values that can be used by the Rectangle constructor to 
+ *  create a new Rectangle instance.
+ *  - vel: an array containing two numbers [horizontalVelocity, verticalVelocity]
+ *  which are the components of this game object's speed.
+ *  Interface of a game object:
+ *  - update: function
+ *  - hit: function
+ */
+
+let GameObject = function(name, [x, y], rects, vel=[0, 0]) {
+    this.name = name;
+    this.pos = [x, y];
+    this.hitbox = rects.map(args => new Rectangle(...args));
+    this.vel = vel;
+}
+
+/* Return true if two game objects are hitting each other, false otherwise.
+ * hit function must be called with the following argument:
+ *  -obj2: the second game object instance
+ */
+GameObject.prototype.hit = function(obj2) {
+    for (const rect of this.hitbox)
+        for (const rect2 of obj2.hitbox)
+            if (rect.collide(rect2))
+                return true;
+    return false;
+}
+
+// Update the position of the game object
+GameObject.prototype.update = function() {
+    const [x, y] = this.pos;
+    const [velX, velY] = this.vel;
+    this.pos = [x+velX, y+velY];
+    this.hitbox.forEach(rect => rect.move(this.vel));
+}
 
 // default size and radius for the golf ball
-const ballSize = 10;
+const ballSize = 15;
 const ballRadius = Math.round(ballSize / Math.sqrt(Math.PI));
+
+// factory for golfball
+GameObject.golfball = function(pos) {
+    const rectPos = pos.map(el => el-ballSize/2);
+    return new GameObject('ball', pos, [[rectPos, ballSize, ballSize]]);
+}
+
 // default size and radius for the goal
-const goalSize = 5;
+const goalSize = 10;
 const goalRadius = Math.round(goalSize / Math.sqrt(Math.PI));
 
-let Circle = function([x, y], radius, hitSize) {
-    this.pos = [x, y];
-    this.size = hitSize;
-    this.hitbox = new Rectangle([x - hitSize/2, y - hitSize/2], hitSize, hitSize);
+// factory for level goal
+GameObject.goal = function(pos) {
+    const rectPos = pos.map(el => el-goalSize/2);
+    return new GameObject('goal', pos, [[pos, goalSize, goalSize]]);
 }
 
-/* Golfball
- *
- */
-let Golfball = function(pos) {
-    Circle.call(this, pos, ballRadius, ballSize);
-    this.vel = [0, 0];
-}
-
-Golfball.prototype.update = function() {
-    this.pos = this.pos.map((axis, index) => axis + this.vel[index]);
-    this.hitbox.middle = this.pos;
-}
 
 /* Level
- *
+ * Represent a level the user must beat. Level constructor must be called with the 
+ * following arguments:
+ *  - posStart: an array containing two numbers [x, y] which are the coordinates
+ *  for where the golf ball spawns
+ *  - posGoal: an array containing two numbers [x, y] which are coordinates for
+ *  the goal to reach
+ *  Interface of a level object:
+ *  - update: function
+ *  - pushball: function
+ *  - force (get/set)
  */
 
-const minForce = 40;
-const maxForce = 130;
+// temp: fixed width and height of a level
+const lvlWidth = 500;
+const lvlHeight = 500;
 
 let Level = function(posStart, posGoal) {
     this.posStart = posStart;
-    this.force = minForce;
-    this.ball = new Golfball(posStart);
-    this.goal = new Circle(posGoal, goalRadius, goalSize);
+    this._force = minForce;
+    this.ball = GameObject.golfball(posStart);
+    this.goal = GameObject.goal(posGoal);
 }
 
-Level.prototype.setForce = function(force) {
-    if (force < minForce)
-        this.force = minForce;
-    else if (force > maxForce)
-        this.force = maxForce;
-    else
-        this.force = force;
-}
+// boundaries for the force to apply to the golf ball
+const minForce = 40;
+const maxForce = 130;
 
+// force (get/set): number representing how strongly the golf ball will be pushed
+Object.defineProperty(Level.prototype, 'force', {
+    enumerable: true,
+    get: function() { return this._force; },
+    set: function(val) {
+        if (val < minForce)
+            this._force = minForce;
+        else if (val > maxForce)
+            this._force = maxForce;
+        else
+            this._force = val;
+    }
+});
+
+/* Game logic here.
+ *  -Update the position and speed of GameObject instances
+ *  -check if the ball is still within the boundaries of the level
+ *  -check if the ball has reached the goal
+ */
 Level.prototype.update = function() {
     this.ball.update();
-    if (this.ball.pos[0] < -2*this.ball.size || this.ball.pos[0] > lvlWidth + 2*this.ball.size ||
-        this.ball.pos[1] < -2*this.ball.size || this.ball.pos[1] > lvlHeight + 2*this.ball.size)
-        this.ball = new Golfball(this.posStart);
-    if (this.ball.hitbox.collide(this.goal.hitbox)) {
+    if (this.ball.pos[0] < -2*ballSize || this.ball.pos[0] > lvlWidth + 2*ballSize ||
+        this.ball.pos[1] < -2*ballSize || this.ball.pos[1] > lvlHeight + 2*ballSize)
+        this.ball = GameObject.golfball(this.posStart);
+    if (this.ball.hit(this.goal)) {
         this.ball.vel = [0, 0];
         console.log('winner!!!');
     }
 }
 
-Level.prototype.pushBall = function([mouseX, mouseY]) {
+/* Change the golf ball velocity to make it move towards the position given, at
+ * a speed depending on the force set. pushBall function must be called with the
+ * following argument:
+ *  -pos: an array containing two numbers [x, y] which are coordinates for the
+ *  direction towards which the golf ball must be pushed
+ */
+Level.prototype.pushBall = function(pos) {
     if (this.ball.vel.every(x => x === 0)) {
-        let dirVector = [mouseX - this.ball.pos[0], mouseY - this.ball.pos[1]];
+        const [posX, posY] = pos;
+        let dirVector = [posX - this.ball.pos[0], posY - this.ball.pos[1]];
         let moveVectorNorm = Math.sqrt(dirVector.map(x => x**2).reduce((acc, val) => acc + val));
-        this.ball.vel = dirVector.map(x => x * (this.force / moveVectorNorm) / (fps / 2));
+        this.ball.vel = dirVector.map(x => x * (this._force / moveVectorNorm) / (fps / 2));
     }
 }
 
 
-///////////////////////////////////////////////////////////Graphics
+////////////////////////////////////////////////////////////Graphics
 
 
 const gameCan = document.querySelector('canvas#game-canvas');
@@ -173,12 +251,13 @@ let drawLevel = function(level) {
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#F00';
     ctx.beginPath();
-    ctx.arc(level.goal.pos[0], level.goal.pos[1], ballRadius, 0, 2*Math.PI);
+    ctx.arc(level.goal.pos[0], level.goal.pos[1], goalRadius, 0, 2*Math.PI);
     ctx.fill();
     ctx.stroke();
 }
 
-///////////////////////////////////////////////////////////Controls
+
+////////////////////////////////////////////////////////////Controls
 
 
 let userClick = function(evt, level) {
@@ -189,7 +268,7 @@ let userClick = function(evt, level) {
 
 let userScroll = function(evt, level) {
     evt.preventDefault();
-    level.setForce(level.force - evt.deltaY);
+    level.force -= evt.deltaY;
 }
 
 gameCan.addEventListener('click', evt => userClick(evt, lvl));
