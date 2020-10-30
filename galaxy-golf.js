@@ -9,11 +9,11 @@ const fps = 80;
 
 
 /* Rectangle
- * Represent the geometric shape of a rectangle. Top and bottom sides are 
- * parallel to the x-axis. Rectangle constructor must be called with the 
+ * Represent the geometric shape of a rectangle. Top and bottom sides are
+ * parallel to the x-axis. Rectangle constructor must be called with the
  * following arguments:
- *  - pos: an array containing two numbers [x, y] which are coordinates for its 
- *  upper-left corner. 
+ *  - pos: an array containing two numbers [x, y] which are coordinates for its
+ *  upper-left corner.
  *  - width: a single number representing its width
  *  - height: a single number representing its height
  *  Interface of a rectangle object:
@@ -36,7 +36,7 @@ let Rectangle = function(pos, width, height) {
 Object.defineProperty(Rectangle.prototype, 'middle', {
     get: function() { return [this.pos[0] - this.width / 2, this.pos[1] - this.height / 2]; },
     set: function(val) {
-        this.pos[0] = val[0] - this.width / 2; 
+        this.pos[0] = val[0] - this.width / 2;
         this.pos[1] = val[1] - this.height / 2;
     }
 });
@@ -88,13 +88,13 @@ Rectangle.prototype.move = function([deltaX, deltaY]) {
 
 
 /* GameObject
- * Represent an object in the game. GameObject constructor must be called with the 
+ * Represent an object in the game. GameObject constructor must be called with the
  * following arguments:
  *  - name: a string allowing the user to identify the game object instance
- *  - pos: an array containing two numbers [x, y] which are coordinates for its 
- *  upper-left corner. 
+ *  - pos: an array containing two numbers [x, y] which are coordinates for its
+ *  center.
  *  - rects: an array of arrays of the form [pos, width, height] where pos, width
- *  and height must be values that can be used by the Rectangle constructor to 
+ *  and height must be values that can be used by the Rectangle constructor to
  *  create a new Rectangle instance.
  *  - vel: an array containing two numbers [horizontalVelocity, verticalVelocity]
  *  which are the components of this game object's speed.
@@ -152,7 +152,7 @@ GameObject.goal = function(pos) {
 
 
 /* Level
- * Represent a level the user must beat. Level constructor must be called with the 
+ * Represent a level the user must beat. Level constructor must be called with the
  * following arguments:
  *  - posStart: an array containing two numbers [x, y] which are the coordinates
  *  for where the golf ball spawns
@@ -228,32 +228,38 @@ Level.prototype.pushBall = function(pos) {
 ////////////////////////////////////////////////////////////Graphics
 
 
+// DOM element that will be used to display the game
 const gameCan = document.querySelector('canvas#game-canvas');
 gameCan.width = lvlWidth;
 gameCan.height = lvlHeight;
 const ctx = gameCan.getContext('2d');
 
-let drawLevel = function(level) {
-    ctx.fillStyle = '#FFF';
-    ctx.fillRect(0, 0, lvlWidth, lvlHeight);
-    // draw ball
-    ctx.fillStyle = '#000';
+// Use ctx to draw the given ball
+const drawBall = function(ctx, [x, y], radius, fillColor, strokeColor='#0000', linewidth=1) {
+    ctx.lineWidth = linewidth;
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
     ctx.beginPath();
-    ctx.arc(level.ball.pos[0], level.ball.pos[1], ballRadius, 0, 2*Math.PI);
-    ctx.fill()
-    // draw force
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#FF0';
-    ctx.beginPath();
-    ctx.arc(level.ball.pos[0], level.ball.pos[1], level.force, 0, 2*Math.PI);
-    ctx.stroke()
-    // draw goal
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#F00';
-    ctx.beginPath();
-    ctx.arc(level.goal.pos[0], level.goal.pos[1], goalRadius, 0, 2*Math.PI);
-    ctx.fill();
+    ctx.arc(x, y, radius, 0, 2*Math.PI);
     ctx.stroke();
+    ctx.fill();
+}
+
+// Use ctx to draw the background
+const drawBackground = function(ctx) {
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+
+// Use ctx to draw the given level
+const drawLevel = function(level) {
+    drawBackground(ctx);
+    // draw golfball
+    drawBall(ctx, level.ball.pos, ballRadius, '#000');
+    // draw force
+    drawBall(ctx, level.ball.pos, level.force, '#0000', '#FF0');
+    // draw goal
+    drawBall(ctx, level.goal.pos, goalRadius, '#000', '#F00', 3);
 }
 
 
