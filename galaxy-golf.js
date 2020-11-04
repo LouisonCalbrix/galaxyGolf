@@ -71,10 +71,15 @@ Object.defineProperty(Rectangle.prototype, 'bottom', {
  *  -rect2: the second rectangle object
  */
 Rectangle.prototype.collide = function(rect2) {
-    return (this.left > rect2.left && this.left < rect2.right ||
-        this.right > rect2.left && this.right < rect2.right) &&
-        (this.top > rect2.top && this.top < rect2.bottom ||
-        this.bottom > rect2.top && this.bottom < rect2.bottom);
+    const collide_x = (this.left > rect2.left && this.left < rect2.right ||
+        this.right > rect2.left && this.right < rect2.right) ||
+        (rect2.left > this.left && rect2.left < this.right ||
+        rect2.right > this.left && rect2.right < this.right);
+    const collide_y = (this.top > rect2.top && this.top < rect2.bottom ||
+        this.bottom > rect2.top && this.bottom < rect2.bottom) ||
+        (rect2.top > this.top && rect2.top < this.bottom ||
+        rect2.bottom > this.top && rect2.bottom < this.bottom);
+    return collide_x && collide_y;
 }
 
 /* Change the rectangle pos, so that it is by [deltaX, deltaY]. move function
