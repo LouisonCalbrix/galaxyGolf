@@ -152,7 +152,13 @@ const goalRadius = Math.round(goalSize / Math.sqrt(Math.PI));
 // factory for level goal
 GameObject.goal = function(pos) {
     const rectPos = pos.map(el => el-goalSize/2);
-    return new GameObject('goal', pos, [[pos, goalSize, goalSize]]);
+    return new GameObject('goal', pos, [[rectPos, goalSize, goalSize]]);
+}
+
+GameObject.blackhole = function(pos, size, force) {
+    const rectPos = pos.map(el => el-size/2);
+    const blackhole = new GameObject('blackhole', pos, [[rectPos, size, size]]);
+    blackhole.force = force;
 }
 
 
