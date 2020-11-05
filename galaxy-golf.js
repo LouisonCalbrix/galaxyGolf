@@ -250,9 +250,10 @@ Level.prototype.handleCollisions = function() {
         if (obj.name === BHOLE_TYPE) {
             const dirVector = [obj.pos[0]-this.ball.pos[0], obj.pos[1]-this.ball.pos[1]];
             const vectorNorm = Math.sqrt(dirVector[0] ** 2 + dirVector[1] ** 2);
-            console.log(`acceleration: ${(dirVector[0]/vectorNorm)*obj.attraction}, ${(dirVector[1]/vectorNorm)*obj.attraction}`);
-            this.ball.vel[0] += (dirVector[0] / vectorNorm) * obj.attraction;
-            this.ball.vel[1] += (dirVector[1] / vectorNorm) * obj.attraction;
+            if (vectorNorm < obj.hitbox[0].width/2) {
+                this.ball.vel[0] += (dirVector[0] / vectorNorm) * obj.attraction;
+                this.ball.vel[1] += (dirVector[1] / vectorNorm) * obj.attraction;
+            }
         }
     }
 }
@@ -318,6 +319,7 @@ const drawGoal = function(ctx, level) {
     ctx.stroke();
 }
 
+// Use ctx to draw obstacles in the course
 const drawObstacles = function(ctx, level) {
     for (const obj of level.obstacles) {
         if (obj.name === BHOLE_TYPE) {
@@ -357,7 +359,7 @@ const drawLevel = function(level) {
 
 
 // test
-var bhole = GameObject.blackhole([200, 250], 70, 0.7);
+var bhole = GameObject.blackhole([140, 250], 170, 0.1);
 var lvl = new Level([20, 20], [250, 400], [bhole]);
 
 ////////////////////////////////////////////////////////////Controls
