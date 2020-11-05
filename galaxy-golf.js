@@ -26,7 +26,7 @@ const fps = 80;
  *  - bottom (get/set)
  */
 
-let Rectangle = function(pos, width, height) {
+const Rectangle = function(pos, width, height) {
     this.pos = pos;
     this.width = width;
     this.height = height;
@@ -108,7 +108,7 @@ Rectangle.prototype.move = function([deltaX, deltaY]) {
  *  - hit: function
  */
 
-let GameObject = function(name, [x, y], rects, vel=[0, 0]) {
+const GameObject = function(name, [x, y], rects, vel=[0, 0]) {
     this.name = name;
     this.pos = [x, y];
     this.hitbox = rects.map(args => new Rectangle(...args));
@@ -135,30 +135,38 @@ GameObject.prototype.update = function() {
     this.hitbox.forEach(rect => rect.move(this.vel));
 }
 
+// types of GameObject instances
+const BALL_TYPE = 'ball'
+const GOAL_TYPE = 'goal'
+const BHOLE_TYPE = 'blackhole'
+
+
 // default size and radius for the golf ball
-const ballSize = 15;
+const ballSize = 20;
 const ballRadius = Math.round(ballSize / Math.sqrt(Math.PI));
 
 // factory for golfball
 GameObject.golfball = function(pos) {
     const rectPos = pos.map(el => el-ballSize/2);
-    return new GameObject('ball', pos, [[rectPos, ballSize, ballSize]]);
+    return new GameObject(BALL_TYPE, pos, [[rectPos, ballSize, ballSize]]);
 }
 
 // default size and radius for the goal
-const goalSize = 10;
-const goalRadius = Math.round(goalSize / Math.sqrt(Math.PI));
+const goalSize = 4;
+const goalRadius = Math.round(Math.SQRT2 * goalSize);
 
 // factory for level goal
 GameObject.goal = function(pos) {
     const rectPos = pos.map(el => el-goalSize/2);
-    return new GameObject('goal', pos, [[rectPos, goalSize, goalSize]]);
+    return new GameObject(GOAL_TYPE, pos, [[rectPos, goalSize, goalSize]]);
 }
 
-GameObject.blackhole = function(pos, size, force) {
+// factory for blackhole
+GameObject.blackhole = function(pos, size, attraction) {
     const rectPos = pos.map(el => el-size/2);
-    const blackhole = new GameObject('blackhole', pos, [[rectPos, size, size]]);
-    blackhole.force = force;
+    const blackhole = new GameObject(BHOLE_TYPE, pos, [[rectPos, size, size]]);
+    blackhole.attraction = attraction;
+    return blackhole;
 }
 
 
@@ -168,6 +176,7 @@ GameObject.blackhole = function(pos, size, force) {
  *  - posStart: an array containing two numbers [x, y] which are the coordinates
  *  for where the golf ball spawns
  *  - posGoal: an array containing two numbers [x, y] which are coordinates for
+ *  - obstacles: an array of GameObject instances that are obstacles on the course
  *  the goal to reach
  *  Interface of a level object:
  *  - update: function
@@ -179,11 +188,13 @@ GameObject.blackhole = function(pos, size, force) {
 const lvlWidth = 500;
 const lvlHeight = 500;
 
-let Level = function(posStart, posGoal) {
+const Level = function(posStart, posGoal, obstacles=[]) {
     this.posStart = posStart;
     this._force = minForce;
     this.ball = GameObject.golfball(posStart);
     this.goal = GameObject.goal(posGoal);
+    this.obstacles = obstacles;
+    this.collisions = [];
 }
 
 // boundaries for the force to apply to the golf ball
@@ -214,9 +225,35 @@ Level.prototype.update = function() {
     if (this.ball.pos[0] < -2*ballSize || this.ball.pos[0] > lvlWidth + 2*ballSize ||
         this.ball.pos[1] < -2*ballSize || this.ball.pos[1] > lvlHeight + 2*ballSize)
         this.ball = GameObject.golfball(this.posStart);
+    this.findCollisions();
+    this.handleCollisions();
     if (this.ball.hit(this.goal)) {
         this.ball.vel = [0, 0];
         console.log('winner!!!');
+    }
+}
+
+// Find gameobjects colliding each other and add them to the collision array
+Level.prototype.findCollisions = function() {
+    this.collisions = [];
+    for (const obj of this.obstacles) {
+        if (this.ball.hit(obj))
+            this.collisions.push(obj);
+    }
+}
+
+/* Go through the collision array and update gameobjects involved in a collision
+ * depending on the type of collision
+ */
+Level.prototype.handleCollisions = function() {
+    for (const obj of this.collisions) {
+        if (obj.name === BHOLE_TYPE) {
+            const dirVector = [obj.pos[0]-this.ball.pos[0], obj.pos[1]-this.ball.pos[1]];
+            const vectorNorm = Math.sqrt(dirVector[0] ** 2 + dirVector[1] ** 2);
+            console.log(`acceleration: ${(dirVector[0]/vectorNorm)*obj.attraction}, ${(dirVector[1]/vectorNorm)*obj.attraction}`);
+            this.ball.vel[0] += (dirVector[0] / vectorNorm) * obj.attraction;
+            this.ball.vel[1] += (dirVector[1] / vectorNorm) * obj.attraction;
+        }
     }
 }
 
@@ -245,15 +282,55 @@ gameCan.width = lvlWidth;
 gameCan.height = lvlHeight;
 const ctx = gameCan.getContext('2d');
 
-// Use ctx to draw the given ball
-const drawBall = function(ctx, [x, y], radius, fillColor, strokeColor='#0000', linewidth=1) {
-    ctx.lineWidth = linewidth;
-    ctx.fillStyle = fillColor;
-    ctx.strokeStyle = strokeColor;
+// Use ctx to draw the hitbox of a GameObject instance (meant for debugging)
+const drawHitbox = function(ctx, gameobject) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#F0F';
+    for (const rect of gameobject.hitbox) {
+        ctx.strokeRect(rect.left - 0.5, rect.top - 0.5, rect.width, rect.height);
+    }
+}
+
+// Use ctx to draw the golfball
+const drawBall = function(ctx, level) {
+    ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2*Math.PI);
-    ctx.stroke();
+    ctx.arc(level.ball.pos[0], level.ball.pos[1], ballRadius, 0, 2*Math.PI); 
     ctx.fill();
+}
+
+const drawForce = function(ctx, level) {
+    ctx.strokeStyle = '#FF0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(level.ball.pos[0], level.ball.pos[1], level.force, 0, 2*Math.PI);
+    ctx.stroke();
+}
+
+// Use ctx to draw the goal
+const drawGoal = function(ctx, level) {
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = '#A22';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(level.goal.pos[0], level.goal.pos[1], goalRadius, 0, 2*Math.PI);
+    ctx.fill();
+    ctx.stroke();
+}
+
+const drawObstacles = function(ctx, level) {
+    for (const obj of level.obstacles) {
+        if (obj.name === BHOLE_TYPE) {
+            ctx.fillStyle = '#22A';
+            ctx.beginPath();
+            ctx.arc(obj.pos[0], obj.pos[1], goalRadius, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#44B';
+            ctx.beginPath();
+            ctx.arc(obj.pos[0], obj.pos[1], obj.hitbox[0].width/2, 0, 2*Math.PI);
+            ctx.stroke();
+        }
+    }
 }
 
 // Use ctx to draw the background
@@ -266,24 +343,33 @@ const drawBackground = function(ctx) {
 const drawLevel = function(level) {
     drawBackground(ctx);
     // draw golfball
-    drawBall(ctx, level.ball.pos, ballRadius, '#000');
+    drawBall(ctx, level);
+    drawHitbox(ctx, level.ball);
     // draw force
-    drawBall(ctx, level.ball.pos, level.force, '#0000', '#FF0');
+    drawForce(ctx, level);
     // draw goal
-    drawBall(ctx, level.goal.pos, goalRadius, '#000', '#F00', 3);
+    drawGoal(ctx, level);
+    drawHitbox(ctx, level.goal);
+    drawObstacles(ctx, level);
+    for (const obj of level.obstacles)
+        drawHitbox(ctx, obj);
 }
 
+
+// test
+var bhole = GameObject.blackhole([200, 250], 70, 0.7);
+var lvl = new Level([20, 20], [250, 400], [bhole]);
 
 ////////////////////////////////////////////////////////////Controls
 
 
-let userClick = function(evt, level) {
+const userClick = function(evt, level) {
     let canRect = evt.target.getBoundingClientRect();
     let [mouseX, mouseY] = [evt.clientX - canRect.left, evt.clientY - canRect.top];
     level.pushBall([mouseX, mouseY]);
 }
 
-let userScroll = function(evt, level) {
+const userScroll = function(evt, level) {
     evt.preventDefault();
     level.force -= evt.deltaY;
 }
@@ -293,6 +379,6 @@ gameCan.addEventListener('wheel', evt => userScroll(evt, lvl));
 
 // Test
 
-var lvl = new Level([20, 20], [250, 400]);
+// TODO: instantiate level with a blackhole and test if it works properly.
+
 setInterval(() => { lvl.update(); drawLevel(lvl); }, Math.round(1000/fps));
-drawLevel(lvl);
