@@ -2,6 +2,8 @@
 // date: October 2020
 // author: Louison Calbrix
 
+'use strict';
+
 const fps = 80;
 
 
@@ -27,42 +29,47 @@ const fps = 80;
  */
 
 const Rectangle = function(pos, width, height) {
-    this.pos = pos;
+    Object.defineProperty(this, '_pos', { enumerable: false, writable: true, value: pos });
     this.width = width;
     this.height = height;
 }
 
 // middle (get/set): coordinates for the middle of the rectangle
 Object.defineProperty(Rectangle.prototype, 'middle', {
-    get: function() { return [this.pos[0] - this.width / 2, this.pos[1] - this.height / 2]; },
+    enumerable: true,
+    get: function() { return [this._pos[0] - this.width / 2, this._pos[1] - this.height / 2]; },
     set: function(val) {
-        this.pos[0] = val[0] - this.width / 2;
-        this.pos[1] = val[1] - this.height / 2;
+        this._pos[0] = val[0] - this.width / 2;
+        this._pos[1] = val[1] - this.height / 2;
     }
 });
 
 // left (get/set): x coordinate for the left side of the rectangle
 Object.defineProperty(Rectangle.prototype, 'left', {
-    get: function() { return this.pos[0]; },
-    set: function(val) { this.pos[0] = val; }
+    enumerable: true,
+    get: function() { return this._pos[0]; },
+    set: function(val) { this._pos[0] = val; }
 });
 
 // right (get/set): x coordinate for the right side of the rectangle
 Object.defineProperty(Rectangle.prototype, 'right', {
-    get: function() { return this.pos[0] + this.width; },
-    set: function(val) { this.pos[0] = val - this.width; }
+    enumerable: true,
+    get: function() { return this._pos[0] + this.width; },
+    set: function(val) { this._pos[0] = val - this.width; }
 });
 
 // top (get/set): y coordinate for the top side of the rectangle
 Object.defineProperty(Rectangle.prototype, 'top', {
-    get: function() { return this.pos[1]; },
-    set: function(val) { this.pos[1] = val; }
+    enumerable: true,
+    get: function() { return this._pos[1]; },
+    set: function(val) { this._pos[1] = val; }
 });
 
 // bottom (get/set): y coordinate for the bottom side of the rectangle
 Object.defineProperty(Rectangle.prototype, 'bottom', {
-    get: function() { return this.pos[1] + this.height; },
-    set: function(val) { this.pos[1] = val - this.height; }
+    enumerable: true,
+    get: function() { return this._pos[1] + this.height; },
+    set: function(val) { this._pos[1] = val - this.height; }
 });
 
 
@@ -108,12 +115,22 @@ Rectangle.prototype.move = function([deltaX, deltaY]) {
  *  - hit: function
  */
 
-const GameObject = function(name, [x, y], rects, vel=[0, 0]) {
+const GameObject = function(name, pos, rects, vel=[0, 0]) {
     this.name = name;
-    this.pos = [x, y];
+    Object.defineProperty(this, '_pos', { enumerable: false, writable: true, value: pos });
     this.hitbox = rects.map(args => new Rectangle(...args));
     this.vel = vel;
 }
+
+Object.defineProperty(GameObject.prototype, 'pos', { 
+    enumerable: true,
+    get: function() { return this._pos; },
+    set: function([x, y]) {
+        const dif = [x - this._pos[0], y - this._pos[1]];
+        this._pos = [x, y];
+        this.hitbox.forEach(rect => rect.move(dif));
+    }
+});
 
 /* Return true if two game objects are hitting each other, false otherwise.
  * hit function must be called with the following argument:
@@ -132,7 +149,6 @@ GameObject.prototype.update = function() {
     const [x, y] = this.pos;
     const [velX, velY] = this.vel;
     this.pos = [x+velX, y+velY];
-    this.hitbox.forEach(rect => rect.move(this.vel));
 }
 
 // types of GameObject instances
@@ -321,6 +337,7 @@ const drawGoal = function(ctx, level) {
 
 // Use ctx to draw obstacles in the course
 const drawObstacles = function(ctx, level) {
+    ctx.lineWidth = 1;
     for (const obj of level.obstacles) {
         if (obj.name === BHOLE_TYPE) {
             ctx.fillStyle = '#22A';
@@ -346,15 +363,15 @@ const drawLevel = function(level) {
     drawBackground(ctx);
     // draw golfball
     drawBall(ctx, level);
-    drawHitbox(ctx, level.ball);
+//    drawHitbox(ctx, level.ball);
     // draw force
     drawForce(ctx, level);
     // draw goal
     drawGoal(ctx, level);
-    drawHitbox(ctx, level.goal);
+//    drawHitbox(ctx, level.goal);
     drawObstacles(ctx, level);
-    for (const obj of level.obstacles)
-        drawHitbox(ctx, obj);
+//    for (const obj of level.obstacles)
+//        drawHitbox(ctx, obj);
 }
 
 
